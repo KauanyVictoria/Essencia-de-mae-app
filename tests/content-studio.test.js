@@ -192,3 +192,58 @@ test("usa o nome configurado para associar aliases mesmo quando o slug é person
     { value: "ready_video", label: "Pronto para gravar" },
   ]);
 });
+
+test("regressão integrada: estúdio e status semântico coexistem no carregamento e payload", () => {
+  const { context, element } = app();
+  vm.runInContext(`
+    STATUS_CONFIG=[{id:"ready",name:"Pronto para gravar",key:"pronto_gravar",color:"#667755"}];
+    legacy=contentFromDb({
+      id:"legacy-1",titulo:"Conteúdo legado",pilar:"Fé",intencao:"Conexão",
+      duracao:"30–60s",bloco:blocks[2],status:"a-gravar",
+      gancho_sonoro:"Escute",gancho_visual:"Veja",gancho_texto:"Leia",
+      contexto:"Contexto",pontos:"Pontos",virada:"Virada",conclusao:"Conclusão",
+      cta:"CTA",observacoes:"Gravar em pé",roteiro_automatico:"Auto anterior",
+      roteiro_personalizado:"Minha versão"
+    });
+    C=[legacy,{id:"current-1",status:"pronto_gravar"}];
+    options=flowStatusOptions();
+  `, context);
+
+  assert.deepEqual(JSON.parse(vm.runInContext(`JSON.stringify(options)`, context)), [
+    { value: "pronto_gravar", label: "Pronto para gravar" },
+  ]);
+  assert.equal(vm.runInContext(`legacy.visualHook`, context), "Veja");
+  assert.equal(vm.runInContext(`legacy.soundHook`, context), "Escute");
+  assert.equal(vm.runInContext(`legacy.textHook`, context), "Leia");
+  assert.equal(vm.runInContext(`legacy.context`, context), "Contexto");
+  assert.equal(vm.runInContext(`legacy.conclusion`, context), "Conclusão");
+  assert.equal(vm.runInContext(`legacy.customScript`, context), "Minha versão");
+  assert.equal(vm.runInContext(`buildAutomaticScript(legacy)`, context), "Escute\n\nContexto\n\nPontos\n\nVirada\n\nConclusão\n\nCTA");
+  assert.equal(vm.runInContext(`statusColor("a-gravar")`, context), "#667755");
+
+  vm.runInContext(`studioEditState={originalStatus:"a-gravar",displayStatus:"pronto_gravar"}`, context);
+  element("f_s").value = "pronto_gravar";
+  assert.equal(vm.runInContext(`statusForSave()`, context), "a-gravar");
+
+  vm.runInContext(`payload=contentToDb({
+    title:legacy.title,pillar:legacy.pillar,intent:legacy.intent,duration:legacy.duration,
+    block:legacy.block,status:statusForSave(),soundHook:legacy.soundHook,
+    visualHook:legacy.visualHook,textHook:legacy.textHook,context:legacy.context,
+    points:legacy.points,turn:legacy.turn,conclusion:legacy.conclusion,cta:legacy.cta,
+    notes:legacy.notes,automaticScript:buildAutomaticScript(legacy),
+    customScript:legacy.customScript,date:""
+  })`, context);
+  const payload = JSON.parse(vm.runInContext(`JSON.stringify(payload)`, context));
+  assert.equal(payload.status, "a-gravar");
+  assert.equal(payload.gancho_visual, "Veja");
+  assert.equal(payload.gancho_sonoro, "Escute");
+  assert.equal(payload.gancho_texto, "Leia");
+  assert.equal(payload.contexto, "Contexto");
+  assert.equal(payload.conclusao, "Conclusão");
+  assert.equal(payload.roteiro_personalizado, "Minha versão");
+  assert.equal(payload.user_id, "user-1");
+
+  vm.runInContext(`studioEditState={originalStatus:null,displayStatus:"pronto_gravar"}`, context);
+  element("f_s").value = "pronto_gravar";
+  assert.equal(vm.runInContext(`statusForSave()`, context), "pronto_gravar");
+});
