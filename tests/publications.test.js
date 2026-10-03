@@ -81,8 +81,9 @@ test("adiciona TikTok e Instagram uma vez e mantém registros independentes apó
   a.element("publicationPlatform").value = "instagram";
   await vm.runInContext('addPublication("content-1")', a.context);
   assert.deepEqual(a.rows.map(x => x.plataforma), ["tiktok", "instagram"]);
+  assert.deepEqual(a.rows.map(x => x.status), ["nao_planejado", "nao_planejado"]);
 
-  for (const [id, value] of Object.entries({ pub_title_pub_1: "Título TikTok", pub_caption_pub_1: "Legenda TikTok", pub_hashtags_pub_1: "#tiktok", pub_date_pub_1: "2026-10-10", pub_time_pub_1: "09:30", pub_status_pub_1: "Agendada" })) a.element(id.replaceAll("_pub_", "_pub-")).value = value;
+  for (const [id, value] of Object.entries({ pub_title_pub_1: "Título TikTok", pub_caption_pub_1: "Legenda TikTok", pub_hashtags_pub_1: "#tiktok", pub_date_pub_1: "2026-10-10", pub_time_pub_1: "09:30", pub_status_pub_1: "programado" })) a.element(id.replaceAll("_pub_", "_pub-")).value = value;
   await vm.runInContext('savePublication("pub-1")', a.context);
   assert.equal(a.rows[0].titulo, "Título TikTok");
   assert.equal(a.rows[1].titulo, "");
@@ -93,6 +94,13 @@ test("adiciona TikTok e Instagram uma vez e mantém registros independentes apó
   a.element("publicationPlatform").value = "tiktok";
   await vm.runInContext('addPublication("content-1")', a.context);
   assert.equal(a.rows.length, 2, "não duplica plataforma");
+});
+
+test("aceita exatamente os quatro status de publicação válidos", () => {
+  const a = app();
+  const statuses = vm.runInContext(`publicationStatuses.map(({value}) => publicationToDb({platform:"instagram",title:"",caption:"",hashtags:"",date:"",time:"",status:value},"content-1").status)`, a.context);
+  assert.deepEqual([...statuses], ["nao_planejado", "planejado", "programado", "publicado"]);
+  assert.equal(vm.runInContext(`publicationToDb({platform:"instagram",title:"",caption:"",hashtags:"",date:"",time:"",status:"a-gravar"},"content-1").status`, a.context), "nao_planejado");
 });
 
 test("exclui somente a publicação escolhida e não altera o conteúdo", async () => {
