@@ -18,7 +18,8 @@ Use uma chave **publishable** (`sb_publishable_...`) ou a chave pública legada
 Além de `id`, `user_id` e, opcionalmente, `created_at`, o frontend usa:
 
 - `conteudos`: `titulo`, `pilar`, `intencao`, `duracao`, `bloco`, `status`,
-  `gancho`, `pontos`, `virada`, `cta` e `data_publicacao`;
+  `gancho`, `pontos`, `virada`, `cta`, `data_publicacao`, `bloco_id` e
+  `pilar_id`;
 - `calendario`: `titulo`, `data` e `conteudo_id` (este último pode ser nulo para
   compromissos independentes);
 - `publicacoes`: `conteudo_id`, `plataforma`, `titulo`, `legenda`, `hashtags`,
@@ -49,3 +50,23 @@ nem substitui registros e não é executada automaticamente pelo frontend.
 A tabela deve manter RLS habilitado. As políticas existentes precisam permitir
 `select` e `update` somente quando `auth.uid() = user_id`; o frontend também
 aplica `.eq("user_id", currentUser.id)` tanto na leitura quanto na atualização.
+
+## Blocos e pilares personalizados (V2.3)
+
+Antes de usar o gerenciamento em Configurações, execute **manualmente**
+`supabase/migrations/20261003000000_v23_blocos_pilares.sql` no SQL Editor do
+Supabase. A migration não é executada pelo aplicativo e não apaga nem converte
+conteúdos existentes. Ela:
+
+- garante as tabelas `blocos` e `pilares`, com `user_id`, `nome` e `ordem`;
+- adiciona `conteudos.bloco_id` e `conteudos.pilar_id`, mantendo `bloco` e
+  `pilar` como camada de compatibilidade para os registros antigos;
+- habilita RLS e cria políticas que limitam as duas configurações ao usuário
+  autenticado;
+- cria índices de nome por usuário e duas funções transacionais usadas para
+  renomear, mover conteúdos e excluir com segurança.
+
+Os registros antigos não são associados automaticamente. Eles continuam
+visíveis pelos valores textuais legados e recebem os IDs quando forem salvos ou
+movidos pelo usuário. Para disponibilizar opções personalizadas, crie ao menos
+um bloco e um pilar em Configurações depois de aplicar a migration.
