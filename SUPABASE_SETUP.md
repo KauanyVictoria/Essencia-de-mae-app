@@ -20,11 +20,15 @@ Além de `id`, `user_id` e, opcionalmente, `created_at`, o frontend usa:
 - `conteudos`: `titulo`, `pilar`, `intencao`, `duracao`, `bloco`, `status`,
   `gancho`, `pontos`, `virada`, `cta` e `data_publicacao`;
 - `calendario`: `titulo`, `data` e `conteudo_id` (este último pode ser nulo para
-  compromissos independentes).
+  compromissos independentes);
+- `publicacoes`: `conteudo_id`, `plataforma`, `titulo`, `legenda`, `hashtags`,
+  `data_publicacao`, `horario_publicacao` e `status`.
 
-`conteudos.user_id` e `calendario.user_id` devem ser UUIDs relacionados a
+Os campos `user_id` dessas tabelas devem ser UUIDs relacionados a
 `auth.users(id)`. As políticas de RLS precisam permitir `select`, `insert`,
-`update` e `delete` quando `auth.uid() = user_id`.
+`update` e `delete` somente quando `auth.uid() = user_id`. Cada publicação é
+associada ao conteúdo principal por `publicacoes.conteudo_id = conteudos.id`;
+o aplicativo não cria publicações automaticamente para conteúdos existentes.
 
 O nome informado no cadastro é salvo em `auth.users.raw_user_meta_data.nome`.
 A sessão é persistida e renovada automaticamente pelo cliente oficial do
